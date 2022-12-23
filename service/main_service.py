@@ -29,31 +29,40 @@ class MainService:
             'FILE': RecvFile(),
         }
         self.recv_open_handlers: dict[str, RecvOpenHandler] = {
-            'WEBCAM': RecvWebcam(),
+            'WEBCAM_RECV': RecvWebcam(),
         }
         self.send_close_handlers: dict[str, SendCloseHandler] = {
 
         }
         self.send_open_handlers: dict[str, SendOpenHandler] = {
-            'WEBCAM': SendWebcam(),
+            'WEBCAM_SEND': SendWebcam(),
         }
         self.thread: Thread | None = None
 
     # ========== private ====================
     def __process_json(self, msg: dict):
+        print('__process_json:',msg)
         self.last_json = msg
         if msg['type'] == 'command':
             # if I am already handling a command, I store the new one in the queue
-            if self.current_command is not None:
+            if self.current_command is not None and not 'stop' in msg.keys() :
                 self.commands_queue.append(msg)
                 return
 
             self.current_command = msg
             cmd = msg['command_name']
 
-            # initialize the handler if it is a "close" one
+            if 'stop' in msg.keys():
+                self.current_command=None
+
+            # initialize the handler if it is a RECV_CLOSE one
             if cmd in self.recv_close_handlers.keys():
                 self.recv_close_handlers[cmd].initialize(msg)
+
+            # close the handler if it is a RECV_OPEN one and the cmd asks to close
+            elif cmd in self.recv_open_handlers.keys():
+                if 'stop' in msg.keys():
+                    self.recv_open_handlers[cmd].stop()
 
     def __process_bytes(self, msg: bytes):
         if self.current_command is None:
@@ -62,6 +71,7 @@ class MainService:
         if cmd in self.recv_close_handlers.keys():
             self.recv_close_handlers[cmd].process(msg, self.last_json['md5'])
         elif cmd in self.recv_open_handlers.keys():
+            self.websocket_manager.send_string('PKG_RECV')
             self.recv_open_handlers[cmd].process(msg)
 
     def __process_string(self, msg: str):

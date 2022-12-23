@@ -12,7 +12,7 @@ class SendWebcam(SendOpenHandler):
             'type': 'command',
             'command_type': 'recv',
             'stream_type': 'open',
-            'command_name': 'WEBCAM'
+            'command_name': 'WEBCAM_RECV'
         }
         return cmd
 

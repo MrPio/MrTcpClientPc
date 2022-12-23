@@ -9,6 +9,7 @@ class WebcamManager:
     def close(self):
         self.webcam.release()
 
+
     def open(self):
         self.webcam.open(0)
 
