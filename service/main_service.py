@@ -8,6 +8,8 @@ from checksum.checksum_check import ChecksumCheck
 from checksum.md5_checksum_check import MD5ChecksumCheck
 from service.recv_close_handler.recv_close_handler import RecvCloseHandler
 from service.recv_close_handler.recv_file import RecvFile
+from service.recv_open_handler.recv_gyroscope import RecvGyroscope
+from service.recv_open_handler.recv_microphone import RecvMicrophone
 from service.recv_open_handler.recv_open_handler import RecvOpenHandler
 from service.recv_open_handler.recv_webcam import RecvWebcam
 from service.send_close_handler.send_close_handler import SendCloseHandler
@@ -30,6 +32,8 @@ class MainService:
         }
         self.recv_open_handlers: dict[str, RecvOpenHandler] = {
             'WEBCAM_RECV': RecvWebcam(),
+            'MIC_RECV': RecvMicrophone(),
+            'GYRO_RECV': RecvGyroscope(),
         }
         self.send_close_handlers: dict[str, SendCloseHandler] = {
 
@@ -38,14 +42,15 @@ class MainService:
             'WEBCAM_SEND': SendWebcam(),
         }
         self.thread: Thread | None = None
+        self.last_notify: int = time.time_ns()
 
     # ========== private ====================
     def __process_json(self, msg: dict):
-        print('__process_json:',msg)
+        print('__process_json:', msg)
         self.last_json = msg
         if msg['type'] == 'command':
             # if I am already handling a command, I store the new one in the queue
-            if self.current_command is not None and not 'stop' in msg.keys() :
+            if self.current_command is not None and not 'stop' in msg.keys():
                 self.commands_queue.append(msg)
                 return
 
@@ -53,11 +58,15 @@ class MainService:
             cmd = msg['command_name']
 
             if 'stop' in msg.keys():
-                self.current_command=None
+                self.current_command = None
 
             # initialize the handler if it is a RECV_CLOSE one
             if cmd in self.recv_close_handlers.keys():
                 self.recv_close_handlers[cmd].initialize(msg)
+
+            # initialize the handler if it is a RECV_OPEN one
+            if cmd in self.recv_open_handlers.keys():
+                self.recv_open_handlers[cmd].initialize()
 
             # close the handler if it is a RECV_OPEN one and the cmd asks to close
             elif cmd in self.recv_open_handlers.keys():
@@ -75,12 +84,15 @@ class MainService:
             self.recv_open_handlers[cmd].process(msg)
 
     def __process_string(self, msg: str):
+        if time.time_ns() - self.last_notify < 0.3e9:
+            return
+        self.last_notify = time.time_ns()
         from main import ROOT_DIR
         notifica = winotify.Notification(
             app_id='MrTcp',
             title='You received a message',
             msg=msg,
-            icon=ROOT_DIR+'/icon.ico',
+            icon=ROOT_DIR + '/icon.ico',
             duration='short',
         )
         notifica.set_audio(winotify.audio.Default, False)

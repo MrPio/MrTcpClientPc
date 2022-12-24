@@ -1,11 +1,7 @@
 import io
-import os
-import time
-from typing import BinaryIO
 
 import cv2
 import numpy
-import userpaths
 from PIL import Image
 
 from service.recv_open_handler.recv_open_handler import RecvOpenHandler
