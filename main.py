@@ -5,14 +5,11 @@ from PIL import Image
 from pystray import Icon, Menu, MenuItem
 
 from service.main_service import MainService
-from websocket_manager.websocket_manager import WebsocketManager
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-websocket_manager = WebsocketManager(
-    token='mrpio1',
-    trace=False,
-)
-mainService = MainService(websocket_manager)
+
+mainService = MainService.getInstance()
+websocket_manager=mainService.websocket_manager
 
 
 def start_tray():

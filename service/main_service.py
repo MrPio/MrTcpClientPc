@@ -6,6 +6,10 @@ import winotify
 
 from checksum.checksum_check import ChecksumCheck
 from checksum.md5_checksum_check import MD5ChecksumCheck
+from service.command.command import Command
+from service.command.mouse_left import MouseLeft
+from service.command.mouse_middle import MouseMiddle
+from service.command.mouse_right import MouseRight
 from service.recv_close_handler.recv_close_handler import RecvCloseHandler
 from service.recv_close_handler.recv_file import RecvFile
 from service.recv_open_handler.recv_gyroscope import RecvGyroscope
@@ -20,8 +24,12 @@ from websocket_manager.websocket_manager import WebsocketManager
 
 class MainService:
     checksum_check: ChecksumCheck = MD5ChecksumCheck()
+    __key = object()
+    __instance: 'MainService' = None
 
-    def __init__(self, websocket_manager: WebsocketManager):
+    def __init__(self, key, websocket_manager: WebsocketManager):
+        assert (key == MainService.__key)
+
         websocket_manager.on_message = self.__on_message
         self.websocket_manager = websocket_manager
         self.current_command: dict | None = None
@@ -41,21 +49,42 @@ class MainService:
         self.send_open_handlers: dict[str, SendOpenHandler] = {
             'WEBCAM_SEND': SendWebcam(),
         }
+        self.commands: dict[str, Command] = {
+            'MOUSE_LEFT': MouseLeft(),
+            'MOUSE_RIGHT': MouseRight(),
+            'MOUSE_MIDDLE': MouseMiddle(),
+        }
         self.thread: Thread | None = None
         self.last_notify: int = time.time_ns()
+
+    @staticmethod
+    def getInstance() -> 'MainService':
+        if MainService.__instance == None:
+            MainService.__instance = MainService(
+                key=MainService.__key,
+                websocket_manager=WebsocketManager(
+                    token='mrp',
+                    trace=False,
+                ),
+            )
+        return MainService.__instance
 
     # ========== private ====================
     def __process_json(self, msg: dict):
         print('__process_json:', msg)
-        self.last_json = msg
+        self.last_json = msg #TODO mettere bene il checksum ricevuto
         if msg['type'] == 'command':
+            cmd = msg['command_name']
+            if cmd in self.commands.keys():
+                self.commands[cmd].execute(msg)
+                return
+
             # if I am already handling a command, I store the new one in the queue
             if self.current_command is not None and not 'stop' in msg.keys():
                 self.commands_queue.append(msg)
                 return
 
             self.current_command = msg
-            cmd = msg['command_name']
 
             if 'stop' in msg.keys():
                 self.current_command = None
@@ -66,12 +95,13 @@ class MainService:
 
             # initialize the handler if it is a RECV_OPEN one
             if cmd in self.recv_open_handlers.keys():
-                self.recv_open_handlers[cmd].initialize()
-
-            # close the handler if it is a RECV_OPEN one and the cmd asks to close
-            elif cmd in self.recv_open_handlers.keys():
                 if 'stop' in msg.keys():
+                    # close the handler if it is a RECV_OPEN one and the cmd asks to close
                     self.recv_open_handlers[cmd].stop()
+                else:
+                    self.recv_open_handlers[cmd].initialize()
+
+
 
     def __process_bytes(self, msg: bytes):
         if self.current_command is None:
