@@ -1,10 +1,12 @@
 import pyautogui
 
+
 from service.recv_open_handler.recv_open_handler import RecvOpenHandler
 
 
 class RecvGyroscope(RecvOpenHandler):
     def __init__(self):
+        from hardware.mouse.cursor_manager import CursorManager
         self.precision = 2
         self.screen_width, self.screen_height = pyautogui.size()
         self.frequency = 0.016
@@ -16,11 +18,15 @@ class RecvGyroscope(RecvOpenHandler):
         self.sum = 0
         self.compens_z = -0.0183
         self.compens_x = -0.0164
+        self.cursor_manager = CursorManager.getInstance()
 
-    def initialize(self) -> None:
-        print('pyautogui.PAUSE')
+    def initialize(self,cmd: dict) -> None:
         pyautogui.PAUSE = 0
         pyautogui.FAILSAFE = False
+        if 'value' in cmd.keys():
+            if cmd['value']=='laser':
+                self.cursor_manager.change_cursor()
+
 
     def process(self, msg: bytes) -> None:
         x, y, z = [float(x) for x in msg.decode().split(':')]
@@ -43,4 +49,6 @@ class RecvGyroscope(RecvOpenHandler):
 
 
     def stop(self) -> None:
-        pass
+        from hardware.mouse.cursor_manager import CursorManager
+        if self.cursor_manager.changed:
+            self.cursor_manager.restore_cursor()

@@ -8,7 +8,7 @@ class RecvMicrophone(RecvOpenHandler):
         self.pyaudio = pyaudio.PyAudio()
         self.stream: pyaudio.Stream | None = None
 
-    def initialize(self) -> None:
+    def initialize(self,cmd: dict) -> None:
         self.stream = self.pyaudio.open(format=pyaudio.paInt16,
                                         channels=1,
                                         rate=44100,

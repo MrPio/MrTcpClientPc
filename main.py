@@ -1,4 +1,5 @@
 import os
+import time
 from threading import Thread
 
 from PIL import Image
@@ -9,7 +10,7 @@ from service.main_service import MainService
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 mainService = MainService.getInstance()
-websocket_manager=mainService.websocket_manager
+websocket_manager = mainService.websocket_manager
 
 
 def start_tray():
@@ -115,3 +116,15 @@ def start_tray():
 if __name__ == '__main__':
     Thread(target=start_tray).start()
     websocket_manager.run()
+    #
+    # from hardware.mouse.cursor_manager import CursorManager
+    # c=CursorManager()
+    # c.change_cursor()
+    # time.sleep(2)
+    # c.restore_cursor()
+    # time.sleep(2)
+    # c.change_cursor()
+    # time.sleep(2)
+    # c.restore_cursor()
+    # time.sleep(4)
+    pass

@@ -7,6 +7,7 @@ import winotify
 from checksum.checksum_check import ChecksumCheck
 from checksum.md5_checksum_check import MD5ChecksumCheck
 from service.command.command import Command
+from service.command.laser_power import LaserPower
 from service.command.mouse_left import MouseLeft
 from service.command.mouse_middle import MouseMiddle
 from service.command.mouse_right import MouseRight
@@ -53,13 +54,14 @@ class MainService:
             'MOUSE_LEFT': MouseLeft(),
             'MOUSE_RIGHT': MouseRight(),
             'MOUSE_MIDDLE': MouseMiddle(),
+            'LASER_POWER':LaserPower(),
         }
         self.thread: Thread | None = None
         self.last_notify: int = time.time_ns()
 
     @staticmethod
     def getInstance() -> 'MainService':
-        if MainService.__instance == None:
+        if MainService.__instance is None:
             MainService.__instance = MainService(
                 key=MainService.__key,
                 websocket_manager=WebsocketManager(
@@ -99,7 +101,7 @@ class MainService:
                     # close the handler if it is a RECV_OPEN one and the cmd asks to close
                     self.recv_open_handlers[cmd].stop()
                 else:
-                    self.recv_open_handlers[cmd].initialize()
+                    self.recv_open_handlers[cmd].initialize(msg)
 
 
 

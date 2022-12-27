@@ -3,7 +3,7 @@ import abc
 
 class RecvOpenHandler(metaclass=abc.ABCMeta):
 
-    def initialize(self) -> None:
+    def initialize(self,cmd: dict) -> None:
         pass
 
     @abc.abstractmethod
